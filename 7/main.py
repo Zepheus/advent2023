@@ -1,10 +1,12 @@
 from typing import List, Optional, Dict
 from dataclasses import dataclass
 
-INPUT = "example"
+INPUT = "input"
 PROMPT = "$"
 INDENT_SPACE = 2
 THRESHOLD = 100000
+UNUSED_TARGET = 30_000_000
+MAX_DISK_SPACE = 70_000_000
 
 @dataclass
 class Command:
@@ -36,15 +38,26 @@ class Directory:
 
         return total
 
-    def solution(self, threshold) -> int:
+    def solution_part1(self, threshold) -> int:
         total = 0
         if self.size() < threshold:
             total += self.size()
         
         for child in self.child_directories.values():
-            total += child.solution(threshold)
+            total += child.solution_part1(threshold)
         
         return total
+
+    def solution_part2(self, target: int, best_solution: int) -> int:
+        s = self.size()
+        if s >= target and s < best_solution:
+            best_solution = s
+
+        for child in self.child_directories.values():
+            res = child.solution_part2(target=target, best_solution=best_solution)
+            if res < best_solution:
+                best_solution = res
+        return best_solution
 
 
 def read_file(path):
@@ -147,8 +160,19 @@ def main():
     commands = parse(inputs)
     root = execute(commands=commands)
     #print_directory(root)
-    result = root.solution(threshold=THRESHOLD)
-    print(result)
+    result_pt1 = root.solution_part1(threshold=THRESHOLD)
+    print(f"Sum of small directories is {result_pt1}")
+
+    total_size = root.size()
+
+    current_free_space = MAX_DISK_SPACE - total_size
+    to_be_freed = UNUSED_TARGET - current_free_space
+
+    print(f"Trying to free up at least {to_be_freed}; total size is currently {total_size}")
+    result_pt2 = root.solution_part2(target=to_be_freed, best_solution=total_size)
+    print(f"Smallest directory is {result_pt2} which is {result_pt2 - to_be_freed} too much")
+
+
 
 if __name__ == "__main__":
     main()
